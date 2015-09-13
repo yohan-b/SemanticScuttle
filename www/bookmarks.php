@@ -29,15 +29,21 @@ $cacheservice =SemanticScuttle_Service_Factory::get('Cache');
 isset($_GET['action']) ? define('GET_ACTION', $_GET['action']): define('GET_ACTION', '');
 isset($_POST['submitted']) ? define('POST_SUBMITTED', $_POST['submitted']): define('POST_SUBMITTED', '');
 
-isset($_GET['title']) ? define('GET_TITLE', $_GET['title']): define('GET_TITLE', '');
-isset($_GET['address']) ? define('GET_ADDRESS', $_GET['address']): define('GET_ADDRESS', '');
+// define does not support arrays before PHP version 7
+isset($_GET['title']) ? $TITLE = $_GET['title']: $TITLE = array();
+//isset($_GET['title']) ? define('GET_TITLE', $_GET['title']): define('GET_TITLE', '');
+isset($_GET['address']) ? $ADDRESS = $_GET['address']: $ADDRESS = array();
+//isset($_GET['address']) ? define('GET_ADDRESS', $_GET['address']): define('GET_ADDRESS', '');
 isset($_GET['description']) ? define('GET_DESCRIPTION', $_GET['description']): define('GET_DESCRIPTION', '');
 isset($_GET['privateNote']) ? define('GET_PRIVATENOTE', $_GET['privateNote']): define('GET_PRIVATENOTE', '');
 isset($_GET['tags']) ? define('GET_TAGS', $_GET['tags']): define('GET_TAGS', '');
 isset($_GET['copyOf']) ? define('GET_COPYOF', $_GET['copyOf']): define('GET_COPYOF', '');
 
-isset($_POST['title']) ? define('POST_TITLE', $_POST['title']): define('POST_TITLE', '');
-isset($_POST['address']) ? define('POST_ADDRESS', $_POST['address']): define('POST_ADDRESS', '');
+// define does not support arrays before PHP version 7
+isset($_POST['title']) ? $TITLE = $_POST['title']: $TITLE = array();
+//isset($_POST['title']) ? define('POST_TITLE', $_POST['title']): define('POST_TITLE', '');
+isset($_POST['address']) ? $ADDRESS = $_POST['address']: $ADDRESS = array();
+//isset($_POST['address']) ? define('POST_ADDRESS', $_POST['address']): define('POST_ADDRESS', '');
 isset($_POST['description']) ? define('POST_DESCRIPTION', $_POST['description']): define('POST_DESCRIPTION', '');
 isset($_POST['privateNote']) ? define('POST_PRIVATENOTE', $_POST['privateNote']): define('POST_PRIVATENOTE', '');
 isset($_POST['status']) ? define('POST_STATUS', $_POST['status']): define('POST_STATUS', '');
@@ -53,7 +59,13 @@ if (!isset($_POST['tags'])) {
     $_POST['tags'] = array();
 }
 //echo '<p>' . var_export($_POST, true) . '</p>';die();
+if (! is_array($ADDRESS)) {
+    $ADDRESS = array($ADDRESS);
+}
 
+if (! is_array($TITLE)) {
+    $TITLE = array($TITLE);
+}
 
 if ((GET_ACTION == "add") && !$userservice->isLoggedOn()) {
 	$loginqry = str_replace("'", '%27', stripslashes($_SERVER['QUERY_STRING']));
@@ -130,53 +142,72 @@ $tplVars['loadjs'] = true;
 $saved = false;
 $templatename = 'bookmarks.tpl';
 if ($userservice->isLoggedOn() && POST_SUBMITTED != '') {
-	if (!POST_TITLE || !POST_ADDRESS) {
+	if (!$TITLE || !$ADDRESS) {
 		$tplVars['error'] = T_('Your bookmark must have a title and an address');
 		$templatename = 'editbookmark.tpl';
-	} else {
-		$address = trim(POST_ADDRESS);
-        if (!SemanticScuttle_Model_Bookmark::isValidUrl($address)) {
-            $tplVars['error'] = T_('This bookmark URL may not be added');
-            $templatename = 'editbookmark.tpl';
-        } else if ($bookmarkservice->bookmarkExists($address, $currentUserID)) {
-            // If the bookmark exists already, edit the original
-			$bookmark = $bookmarkservice->getBookmarkByAddress($address);
-			header('Location: '. createURL('edit', $bookmark['bId']));
-			exit();
-			// If it's new, save it
-		} else {
-			$title = trim(POST_TITLE);
-			$description = trim(POST_DESCRIPTION);
-			$privateNote = trim(POST_PRIVATENOTE);
-			$status = intval(POST_STATUS);
-			$categories = explode(',', $_POST['tags']);
-			$saved = true;
-			if ($bookmarkservice->addBookmark($address, $title, $description, $privateNote, $status, $categories)) {
-				if (POST_POPUP != '') {
-					$tplVars['msg'] = '<script type="text/javascript">window.close();</script>';
-				} else {
-					$tplVars['msg'] = T_('Bookmark saved') . ' <a href="javascript:history.go(-2)">'.T_('(Come back to previous page.)').'</a>';
-					// Redirection option
-					if ($GLOBALS['useredir']) {
-						$address = $GLOBALS['url_redir'] . $address;
-					}
-				}
-			} else {
-				$tplVars['error'] = T_('There was an error saving your bookmark. Please try again or contact the administrator.');
-				$templatename = 'editbookmark.tpl';
-				$saved = false;
-			}
-		}
+        } 
+        else {
+		$address = array_map('trim', $ADDRESS);
+                $valid = 1;
+                foreach($address as $value) {        
+                        if (!SemanticScuttle_Model_Bookmark::isValidUrl($value)) {
+                            $tplVars['error'] = T_('This bookmark URL may not be added' + $value);
+                            $templatename = 'editbookmark.tpl';
+                            $valid = 0;
+                            break;
+                        } 
+                }
+                if ($valid) {
+                        $title = array_map('trim', $TITLE);
+                        $description = trim(POST_DESCRIPTION);
+                        $privateNote = trim(POST_PRIVATENOTE);
+                        $status = intval(POST_STATUS);
+                        $categories = explode(',', $_POST['tags']);
+                        $saved = true;
+                        foreach($address as $index => $value) {        
+                                if ($bookmarkservice->bookmarkExists($value, $currentUserID)) {
+                                    // If the bookmark exists already, edit the original
+                                    $bookmark = $bookmarkservice->getBookmarkByAddress($value);
+                                    $bId = intval($bookmark['bId']);
+                                    $row = $bookmarkservice->getBookmark($bId, true);
+                                    $categories = array_unique(array_merge($row['tags'], $categories));
+                                    if (!$bookmarkservice->updateBookmark($bId, $value, $title[$index], $description, $privateNote, $status, $categories)) {
+                                        $tplvars['error'] = T_('Error while saving this bookmark : ' + $value);
+                                        $templatename = 'editbookmark.tpl';
+                                        $saved = false;
+                                        break;
+                                    } 
+                                }
+                                // If it's new, save it
+                                elseif (!$bookmarkservice->addBookmark($value, $title[$index], $description, $privateNote, $status, $categories)) {
+                                        $tplVars['error'] = T_('There was an error saving this bookmark : ' + $value + ' Please try again or contact the administrator.');
+                                        $templatename = 'editbookmark.tpl';
+                                        $saved = false;
+                                        break;
+                                } 
+                        }
+                        if ($saved) {
+                                if (POST_POPUP != '') {
+                                        $tplVars['msg'] = '<script type="text/javascript">window.close();</script>';
+                                } 
+                                else {
+                                        $tplVars['msg'] = T_('Bookmark saved') . ' <a href="javascript:history.go(-2)">'.T_('(Come back to previous page.)').'</a>';
+                                }
+
+                        }
+                }
 	}
 }
 
 if (GET_ACTION == "add") {
 	// If the bookmark exists already, edit the original
-	if ($bookmarkservice->bookmarkExists(stripslashes(GET_ADDRESS), $currentUserID)) {		
-		$bookmark =& $bookmarkservice->getBookmarks(0, NULL, $currentUserID, NULL, NULL, NULL, NULL, NULL, NULL, $bookmarkservice->getHash(stripslashes(GET_ADDRESS)));
-		$popup = (GET_POPUP!='') ? '?popup=1' : '';
-		header('Location: '. createURL('edit', $bookmark['bookmarks'][0]['bId'] . $popup));
-		exit();
+	if (count($ADDRESS) === 1) {
+		if ($bookmarkservice->bookmarkExists(stripslashes($ADDRESS[0]), $currentUserID)) {		
+			$bookmark =& $bookmarkservice->getBookmarks(0, NULL, $currentUserID, NULL, NULL, NULL, NULL, NULL, NULL, $bookmarkservice->getHash(stripslashes($ADDRESS[0])));
+			$popup = (GET_POPUP!='') ? '?popup=1' : '';
+			header('Location: '. createURL('edit', $bookmark['bookmarks'][0]['bId'] . $popup));
+			exit();
+		}
 	}
 	$templatename = 'editbookmark.tpl';
 }
@@ -186,10 +217,10 @@ if ($templatename == 'editbookmark.tpl') {
 		$tplVars['formaction']  = createURL('bookmarks', $currentUsername);
 		if (POST_SUBMITTED != '') {
 			$tplVars['row'] = array(
-                'bTitle' => stripslashes(POST_TITLE),
-                'bAddress' => stripslashes(POST_ADDRESS),
+                'bTitle' => array_map('stripslashes', $TITLE),
+                'bAddress' => array_map('stripslashes', $ADDRESS),
                 'bDescription' => stripslashes(POST_DESCRIPTION),
-			    'bPrivateNote' => stripslashes(POST_PRIVATENOTE),
+                'bPrivateNote' => stripslashes(POST_PRIVATENOTE),
                 'tags' => ($_POST['tags'] ? $_POST['tags'] : array()),
 				'bStatus' => $GLOBALS['defaults']['privacy'],
 			);
@@ -202,12 +233,14 @@ if ($templatename == 'editbookmark.tpl') {
 				}
 			}else {  //copy from pop-up bookmarklet
 			 $tplVars['row'] = array(
-			 	'bTitle' => stripslashes(GET_TITLE),
-                'bAddress' => stripslashes(GET_ADDRESS),
-                'bDescription' => stripslashes(GET_DESCRIPTION),
-                'bPrivateNote' => stripslashes(GET_PRIVATENOTE),
-                'tags' => (GET_TAGS ? explode(',', stripslashes(GET_TAGS)) : array()),
-                'bStatus' => $GLOBALS['defaults']['privacy'] 
+			 	'bTitle' => array_map('stripslashes', $TITLE),
+			 	//'bTitle' => stripslashes(GET_TITLE),
+			 	'bAddress' => array_map('stripslashes', $ADDRESS),
+                		//'bAddress' => stripslashes(GET_ADDRESS),
+                		'bDescription' => stripslashes(GET_DESCRIPTION),
+                		'bPrivateNote' => stripslashes(GET_PRIVATENOTE),
+                		'tags' => (GET_TAGS ? explode(',', stripslashes(GET_TAGS)) : array()),
+                		'bStatus' => $GLOBALS['defaults']['privacy'] 
 			 );
 			}
 				
