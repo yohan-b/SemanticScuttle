@@ -29,8 +29,12 @@ $bookmarkservice = SemanticScuttle_Service_Factory :: get('Bookmark');
 isset($_POST['submitted']) ? define('POST_SUBMITTED', $_POST['submitted']): define('POST_SUBMITTED', '');
 isset($_POST['delete']) ? define('POST_DELETE', $_POST['delete']): define('POST_DELETE', '');
 
-isset($_POST['title']) ? define('POST_TITLE', $_POST['title']): define('POST_TITLE', '');
-isset($_POST['address']) ? define('POST_ADDRESS', $_POST['address']): define('POST_ADDRESS', '');
+// define does not support arrays before PHP version 7
+isset($_POST['title']) ? $TITLE = $_POST['title']: $TITLE = array();
+//isset($_POST['title']) ? define('POST_TITLE', $_POST['title']): define('POST_TITLE', '');
+isset($_POST['address']) ? $ADDRESS = $_POST['address']: $ADDRESS = array();
+//isset($_POST['address']) ? define('POST_ADDRESS', $_POST['address']): define('POST_ADDRESS', '');
+
 isset($_POST['description']) ? define('POST_DESCRIPTION', $_POST['description']): define('POST_DESCRIPTION', '');
 isset($_POST['privateNote']) ? define('POST_PRIVATENOTE', $_POST['privateNote']): define('POST_PRIVATENOTE', '');
 isset($_POST['status']) ? define('POST_STATUS', $_POST['status']): define('POST_STATUS', $GLOBALS['defaults']['privacy']);
@@ -39,6 +43,14 @@ isset($_POST['tags']) ? define('POST_TAGS', $_POST['tags']): define('POST_TAGS',
 isset($_GET['popup']) ? define('GET_POPUP', $_GET['popup']): define('GET_POPUP', '');
 isset($_POST['popup']) ? define('POST_POPUP', $_POST['popup']): define('POST_POPUP', '');
 isset($_POST['referrer']) ? define('POST_REFERRER', $_POST['referrer']): define('POST_REFERRER', '');
+
+if (! is_array($ADDRESS)) {
+    $ADDRESS = array($ADDRESS);
+}
+
+if (! is_array($TITLE)) {
+    $TITLE = array($TITLE);
+}
 
 // Header variables
 $tplVars['pagetitle'] = T_('Edit Bookmark');
@@ -52,28 +64,24 @@ if (!($row = $bookmarkservice->getBookmark(intval($bookmark), true))) {
     $templateservice->loadTemplate('error.404.tpl', $tplVars);
     exit();
 } else {
-
     if (!$bookmarkservice->editAllowed($row)) {
         $tplVars['error'] = T_('You are not allowed to edit this bookmark');
         $templateservice->loadTemplate('error.500.tpl', $tplVars);
         exit();
     } else if (POST_SUBMITTED != '') {
-    
-    	
-    
-        if (!POST_TITLE || !POST_ADDRESS) {
+        if (!$TITLE || !$ADDRESS) {
             $tplVars['error'] = T_('Your bookmark must have a title and an address');
         } else {
             // Update bookmark
             $bId = intval($bookmark);
-            $address = trim(POST_ADDRESS);
-            $title = trim(POST_TITLE);
+            $address = array_map('trim', $ADDRESS);
+            $title = array_map('trim', $TITLE);
             $description = trim(POST_DESCRIPTION);
             $privateNote = trim(POST_PRIVATENOTE);
             $status = intval(POST_STATUS);
             $tags = trim(POST_TAGS);            
             
-            if (!$bookmarkservice->updateBookmark($bId, $address, $title, $description, $privateNote, $status, $tags)) {
+            if (!$bookmarkservice->updateBookmark($bId, $address[0], $title[0], $description, $privateNote, $status, $tags)) {
                 $tplvars['error'] = T_('Error while saving your bookmark');
             } else {
                 if (POST_POPUP != '') {

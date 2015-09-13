@@ -1,6 +1,5 @@
 <?php
 $this->includeTemplate($GLOBALS['top_include']);
-
 $accessPublic = '';
 $accessShared = '';
 $accessPrivate = '';
@@ -33,6 +32,14 @@ if (is_array($row['tags'])) {
     $row['tags'] = implode(', ', $row['tags']);
 }
 
+if (! is_array($row['bAddress'])) {
+    $row['bAddress'] = array($row['bAddress']);
+}
+
+if (! is_array($row['bTitle'])) {
+    $row['bTitle'] = array($row['bTitle']);
+}
+
 $ajaxUrl = ROOT . 'ajax/'
     . (
         ($GLOBALS['adminsAreAdvisedTagsFromOtherAdmins'] && $currentUser->isAdmin())
@@ -40,18 +47,8 @@ $ajaxUrl = ROOT . 'ajax/'
             : 'getcontacttags'
     ) . '.php';
 ?>
-<form action="<?php echo $formaction; ?>" method="post">
+<form onsubmit="var ind = 0; var cb = document.getElementById('checkbox'+ind); while (cb !== undefined) {var title = document.getElementById('titleField'+ind); var address = document.getElementById('address'+ind); if(cb.checked) {cb.parentNode.removeChild(cb);} else {cb.parentNode.removeChild(cb); title.parentNode.removeChild(title); address.parentNode.removeChild(address);} ind++; cb = document.getElementById('checkbox'+ind);}" action="<?php echo $formaction; ?>" method="post">
 <table>
-<tr>
-    <th align="left"><?php echo T_('Address'); ?></th>
-    <td><input type="text" id="address" name="address" size="75" maxlength="65535" value="<?php echo filter($row['bAddress'], 'xml'); ?>" onblur="useAddress(this)" /></td>
-    <td>← <?php echo T_('Required'); ?></td>
-</tr>
-<tr>
-    <th align="left"><?php echo T_('Title'); ?></th>
-    <td><input type="text" id="titleField" name="title" size="75" maxlength="255" value="<?php echo filter($row['bTitle'], 'xml'); ?>" onkeypress="this.style.backgroundImage = 'none';" /></td>
-    <td>← <?php echo T_('Required'); ?></td>
-</tr>
 <tr>
     <th align="left">
     <?php echo T_('Description'); ?>
@@ -126,14 +123,40 @@ $ajaxUrl = ROOT . 'ajax/'
         <?php
         } elseif (isset($referrer)) {
         ?>
-        <input type="hidden" name="referrer" value="<?php echo $referrer; ?>" />
+        <input type="hidden" name="referrer" value="<?php echo filter($referrer, 'xml'); ?>" />
         <?php
         }
         ?>
     </td>
     <td></td>
   </tr>
- </table>
+<?php
+foreach($row['bAddress'] as $index => $address) {
+?>
+<tr>
+    <td height="20px"></td>
+    <td><input type="checkbox" id="checkbox<?php echo $index; ?>" checked /></td>
+    <td></td>
+</tr>
+<tr>
+    <th align="left"><?php echo T_('Address'); ?></th>
+    <td><input type="text" id="address<?php echo $index; ?>" name="address[<?php echo $index; ?>]" size="75" maxlength="65535" value="<?php echo filter($address, 'xml'); ?>" onblur="useAddress(this)" /></td>
+    <td>← <?php echo T_('Required'); ?></td>
+</tr>
+<tr>
+    <th align="left"><?php echo T_('Title'); ?></th>
+    <td><input type="text" id="titleField<?php echo $index; ?>" name="title[<?php echo $index; ?>]" size="75" maxlength="255" value="<?php echo filter($row['bTitle'][$index], 'xml'); ?>" onkeypress="this.style.backgroundImage = 'none';" /></td>
+    <td>← <?php echo T_('Required'); ?></td>
+</tr>
+<tr>
+    <td height="20px"></td>
+    <td></td>
+    <td></td>
+</tr>
+<?php
+}
+?>
+</table>
 </form>
 
 <link href="<?php echo ROOT ?>js/jquery-ui-1.8.11/themes/base/jquery.ui.all.css" rel="stylesheet" type="text/css"/>
