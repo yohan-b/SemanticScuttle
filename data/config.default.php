@@ -253,10 +253,13 @@ $adminsAreAdvisedTagsFromOtherAdmins = false;
  *
  * @var array
  */
-$reservedusers  = array('all', 'watchlist');
+$reservedusers = array('all', 'watchlist');
 
-
-
+/**
+ * If global private mode is enabled (everything will be blocked for unlogged users). 
+ * @var boolean
+ */
+$privatemode = false;
 
 /***************************************************
  * Anti SPAM measures

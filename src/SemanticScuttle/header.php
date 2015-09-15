@@ -171,4 +171,29 @@ if (!defined('UNIT_TEST_MODE') || defined('HTTP_UNIT_TEST_MODE')) {
         header('Content-Type: ' . $httpContentType . '; charset=utf-8');
     }
 }
+// 7 // Block everything if global private mode enabled and user not logged on
+
+// This is required to prevent breaking the API. Some API PHP source files include httpauth.inc.php
+// which already check if the user is logged on and include www-header.php.
+// We also allow password.php so users can reset their password and login.php so they can log in.
+if (isset($GLOBALS['privatemode'])) {
+        if ($GLOBALS['privatemode'] && ! $userservice->isLoggedOn()) {
+                $flag = 1;
+                $included_files = get_included_files();
+                foreach ($included_files as $filename) {
+                        if (strpos($filename,'httpauth.inc.php') !== false || strpos($filename,'password.php') !== false || strpos($filename,'login.php') !== false) {
+                                $flag = 0;
+                                break;
+                        }
+                }
+                if ($flag) {
+                                $tplVars['error'] = T_('You must log in.');
+                                $tplVars['subtitle']    = T_('Log In');
+                                $tplVars['formaction']  = createURL('login');
+                                $tplVars['querystring'] = filter($_SERVER['QUERY_STRING']);
+                                $templateservice->loadTemplate('login.tpl', $tplVars);
+                                die();
+                }
+        }
+}
 ?>
