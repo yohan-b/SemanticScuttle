@@ -733,11 +733,26 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
         if (!is_array($tags) && !is_null($tags)) {
             $tags = explode('+', trim($tags));
         }
-
-        $tagcount = count($tags);
-        for ($i = 0; $i < $tagcount; $i ++) {
-            $tags[$i] = trim($tags[$i]);
+        if (!is_null($tags)) {
+                $tags = array_map('trim', $tags);
         }
+        // Remove shoulder surfing protected tags.
+        if (! empty($GLOBALS['shoulderSurfingProtectedTag']) && $userservice->isLoggedOn() && ! isset($_COOKIE["noshoulderSurfingProtection"])) {
+                $shoulderSurfingProtectedTags = $tag2tagservice->getAllLinkedTags($GLOBALS['shoulderSurfingProtectedTag'], '>', $sId, array());
+                $shoulderSurfingProtectedTags[] = $GLOBALS['shoulderSurfingProtectedTag'];
+                $tags2 = [];
+                foreach ($tags as $tag) {
+                                if (! in_array($tag, $shoulderSurfingProtectedTags, true)) {
+                                        $tags2[] = $tag;
+                                }
+                }
+                // If we filtered everything, we stop here and return nothing.
+                if(! empty($tags) && empty($tags2)) {
+                        return array();
+                }
+                $tags = $tags2;
+        }
+        $tagcount = count($tags);
 
         // Set up the SQL query.
         $query_1 = 'SELECT DISTINCT ';
@@ -899,6 +914,20 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
             $query_4 .= ' AND B.bHash = "'. $hash .'"';
         }
 
+        // Exclude bookmarks with shoulder surfing protected tags.
+        if (! empty($GLOBALS['shoulderSurfingProtectedTag']) && $userservice->isLoggedOn() && ! isset($_COOKIE["noshoulderSurfingProtection"])) {
+                $query_4 .= ' AND B.bId NOT IN (SELECT DISTINCT B0.bId FROM '.  
+                        $this->getTableName() .' AS B0, ' . $userservice->getTableName() 
+                        .' AS U, ' . $b2tservice->getTableName() .' AS T WHERE B0.uId = U.' 
+                        . $userservice->getFieldName('primary') . $privacy .' AND B0.uId = '
+                        . $sId . ' AND (';
+                $count_s = count($shoulderSurfingProtectedTags);
+                for ($i = 0; $i < $count_s - 1; $i++) {
+                        $query_4 .= 'T.tag = "'. $shoulderSurfingProtectedTags[$i] .'" OR ';
+                }
+                $query_4 .= 'T.tag = "'. $shoulderSurfingProtectedTags[$count_s - 1] .'")'
+                        .' AND T.bId = B0.bId)';
+        }
 
         $query = $query_1 . $query_2 . $query_3 . $query_4 . $query_5;
 
@@ -951,6 +980,7 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
 
         $this->db->sql_freeresult($dbresult);
         $output = array ('bookmarks' => $bookmarks, 'total' => $total);
+
         return $output;
     }
 

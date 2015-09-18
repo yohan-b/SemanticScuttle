@@ -329,7 +329,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
 
         $query = 'SELECT tag, bId FROM ' . $this->getTableName()
             . ' WHERE bId IN (' . implode(',', $bookmarkids) . ')'
-            . ' AND LEFT(tag, 7) <> "system:"'
+            . ' AND LEFT(tag, 7) <> "system:"' 
             . ' ORDER BY id, bId ASC';
 
         if (!($dbresult = $this->db->sql_query($query))) {
@@ -353,7 +353,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
 
 
     function &getTags($userid = NULL) {
-        $userservice =SemanticScuttle_Service_Factory::get('User');
+        $userservice = SemanticScuttle_Service_Factory::get('User');
         $logged_on_user = $userservice->getCurrentUserId();
 
         $query = 'SELECT T.tag, COUNT(B.bId) AS bCount FROM '. $GLOBALS['tableprefix'] .'bookmarks AS B INNER JOIN '. $userservice->getTableName() .' AS U ON B.uId = U.'. $userservice->getFieldName('primary') .' INNER JOIN '. $GLOBALS['tableprefix'] .'bookmarks2tags AS T ON B.bId = T.bId';
@@ -366,7 +366,6 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
         } else {
             $conditions['B.bStatus'] = 0;
         }
-
         $query .= ' WHERE '. $this->db->sql_build_array('SELECT', $conditions) .' AND LEFT(T.tag, 7) <> "system:" GROUP BY T.tag ORDER BY bCount DESC, tag';
 
         if (!($dbresult = $this->db->sql_query($query))) {
@@ -376,9 +375,31 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
 
         $output = $this->db->sql_fetchrowset($dbresult);
         $this->db->sql_freeresult($dbresult);
-        return $output;
+        return $this->filterShoulderSurfingProtectedTags($output);
     }
-
+    
+    function &filterShoulderSurfingProtectedTags($dboutput) {
+        $userservice = SemanticScuttle_Service_Factory::get('User');
+        if (! empty($GLOBALS['shoulderSurfingProtectedTag']) && $userservice->isLoggedOn() && ! isset($_COOKIE["noshoulderSurfingProtection"])) {
+                $logged_on_user = $userservice->getCurrentUserId();
+                $ttt = SemanticScuttle_Service_Factory::get('Tag2Tag');
+                $shoulderSurfingProtectedTags = $ttt->getAllLinkedTags($GLOBALS['shoulderSurfingProtectedTag'], '>', $logged_on_user, array());
+                $shoulderSurfingProtectedTags[] = $GLOBALS['shoulderSurfingProtectedTag'];
+                $output = array();
+                foreach ($dboutput as $array) {
+                     $flag = 1;
+                     foreach ($shoulderSurfingProtectedTags as $tag) {
+                            if ($array['tag'] === $tag) {
+                                   $flag = 0;
+                                   break;
+                            }
+                     }
+                     if ($flag) {$output[] = $array;}
+                }
+        return $output;
+        }
+        else {return $dboutput;}
+    }
 
     // Returns the tags related to the specified tags; i.e. attached to the same bookmarks
     function &getRelatedTags($tags, $for_user = NULL, $logged_on_user = NULL, $limit = 10) {
@@ -423,7 +444,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
         }
         $output = $this->db->sql_fetchrowset($dbresult);
         $this->db->sql_freeresult($dbresult);
-        return $output;
+        return $this->filterShoulderSurfingProtectedTags($output);
     }
 
     // Returns the most popular tags used for a particular bookmark hash
@@ -453,7 +474,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
         }
         $output = $this->db->sql_fetchrowset($dbresult);
         $this->db->sql_freeresult($dbresult);
-        return $output;
+        return $this->filterShoulderSurfingProtectedTags($output);
     }
 
 
@@ -613,7 +634,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
 
         $output = $this->db->sql_fetchrowset($dbresult);
         $this->db->sql_freeresult($dbresult);
-        return $output;
+        return $this->filterShoulderSurfingProtectedTags($output);
     }
 
 

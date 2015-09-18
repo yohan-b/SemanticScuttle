@@ -615,6 +615,13 @@ $menu2Tags = array(
     'menu2', 'tags', 'configurable', 'in', 'data/config.php'
 );
 
+/**
+ * Tag protected from shoulder surfing.
+ * This tag, his children and the associated bookmarks won't appear anywhere unless enabled in the UI.
+ *
+ * @var string
+ */
+$shoulderSurfingProtectedTag = 's_hidden';
 
 
 /****************************

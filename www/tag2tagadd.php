@@ -63,7 +63,7 @@ if (POST_CONFIRM != '') {
 }
 
 $tplVars['links']	= $tag2tagservice->getLinks($currentUser->getId());
-
+$tplVars['loadjs'] = true;
 $tplVars['tag1']		= $tag1;
 $tplVars['tag2']		= '';
 $tplVars['subtitle']    = T_('Add Tag Link') .': '. $tag1;

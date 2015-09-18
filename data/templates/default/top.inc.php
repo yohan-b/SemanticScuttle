@@ -22,9 +22,11 @@ if (isset($rsschannels)) {
 <?php if (DEBUG_MODE) : ?>
   <script type="text/javascript" src="<?php echo ROOT_JS ?>jquery-1.4.2.js"></script>
   <script type="text/javascript" src="<?php echo ROOT_JS ?>jquery.jstree.js"></script>
+  <script type="text/javascript" src="<?php echo ROOT_JS ?>jquery.cookie-1.4.1.js"></script>
 <?php else: ?>
   <script type="text/javascript" src="<?php echo ROOT_JS ?>jquery-1.4.2.min.js"></script>
   <script type="text/javascript" src="<?php echo ROOT_JS ?>jquery.jstree.min.js"></script>
+  <script type="text/javascript" src="<?php echo ROOT_JS ?>jquery.cookie-1.4.1.js"></script>
 <?php endif ?>
   <script type="text/javascript" src="<?php echo ROOT ?>jsScuttle.php"></script>
 <?php endif ?>

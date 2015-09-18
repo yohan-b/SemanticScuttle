@@ -262,20 +262,46 @@ if ($templatename == 'editbookmark.tpl') {
 	$tplVars['sidebar_blocks'] = array('watchstatus');
 
 	if (!$cat) { //user page without tags
-        $rssTitle = "My Bookmarks";
+                $rssTitle = "My Bookmarks";
 		$cat = NULL;
 		$tplVars['currenttag'] = NULL;
 		//$tplVars['sidebar_blocks'][] = 'menu2';
 		$tplVars['sidebar_blocks'][] = 'linked';
 		$tplVars['sidebar_blocks'][] = 'popular';
 	} else { //pages with tags
-        $rssTitle = "Tags" . $catTitle;
+                $rssTitle = "Tags" . $catTitle;
 		$rssCat = '/'. filter($cat, 'url');
 		$tplVars['currenttag'] = $cat;
-		$tplVars['sidebar_blocks'][] = 'tagactions';
 		//$tplVars['sidebar_blocks'][] = 'menu2';
-		$tplVars['sidebar_blocks'][] = 'linked';
-		$tplVars['sidebar_blocks'][] = 'related';
+
+                if (! empty($GLOBALS['shoulderSurfingProtectedTag']) && ! isset($_COOKIE["noshoulderSurfingProtection"])) {
+                        $tag2tagservice = SemanticScuttle_Service_Factory::get('Tag2Tag');
+                        $b2tservice     = SemanticScuttle_Service_Factory::get('Bookmark2Tag');
+                        $alltags = $b2tservice->getTags($currentUserID);
+                        $shoulderSurfingProtectedTags = $tag2tagservice->getAllLinkedTags($GLOBALS['shoulderSurfingProtectedTag'], '>', $currentUserID, array());
+                        $shoulderSurfingProtectedTags[] = $GLOBALS['shoulderSurfingProtectedTag'];
+                        $flag = 0;
+                        if (! in_array($cat, $shoulderSurfingProtectedTags, true)) {
+                                foreach ($alltags as $tag) {
+                                        if ($tag['tag'] === $cat) {
+                                                $flag = 1;
+                                                break;  
+                                        }
+                                                
+                                }
+                        }
+                        if ($flag) {
+                                $tplVars['sidebar_blocks'][] = 'tagactions';
+                                $tplVars['sidebar_blocks'][] = 'linked';
+                                $tplVars['sidebar_blocks'][] = 'related';
+                        }
+                }
+                else {
+		                $tplVars['sidebar_blocks'][] = 'tagactions';
+		                $tplVars['sidebar_blocks'][] = 'linked';
+		                $tplVars['sidebar_blocks'][] = 'related';
+                }
+
 		/*$tplVars['sidebar_blocks'][] = 'menu';*/
 	}
 	$tplVars['sidebar_blocks'][] = 'menu2';

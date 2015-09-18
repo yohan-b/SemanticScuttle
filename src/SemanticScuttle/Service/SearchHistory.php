@@ -151,6 +151,10 @@ class SemanticScuttle_Service_SearchHistory extends SemanticScuttle_DbService
         $range = null, $uId = null, $nb = null,
         $start = null, $distinct = false, $withResults = false
     ) {
+        $userservice = SemanticScuttle_Service_Factory::get('User');
+        if ($userservice->isLoggedOn() && ! isset($_COOKIE["noshoulderSurfingProtection"])) {
+                return array();
+        }
         $sql = 'SELECT DISTINCT(shTerms),'
             . ' shId, shRange, shNbResults, shDatetime, uId';
         $sql.= ' FROM '. $this->getTableName();

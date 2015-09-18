@@ -73,6 +73,7 @@ if (POST_CONFIRM) {
 	$tplVars['formaction']  = $_SERVER['SCRIPT_NAME'] .'/'. $tag;
 	$tplVars['referrer']    = $_SERVER['HTTP_REFERER'];
 	$tplVars['old']         = $tag;
+        $tplVars['loadjs']      = true;
 }
 $templateservice->loadTemplate($template, $tplVars);
 ?>

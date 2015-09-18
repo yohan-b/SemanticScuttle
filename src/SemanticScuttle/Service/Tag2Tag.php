@@ -318,7 +318,8 @@ class SemanticScuttle_Service_Tag2Tag extends SemanticScuttle_DbService
         }
         $output = $this->db->sql_fetchrowset($dbresult);
         $this->db->sql_freeresult($dbresult);
-        return $output;
+        $btt = SemanticScuttle_Service_Factory::get('Bookmark2Tag');
+        return $btt->filterShoulderSurfingProtectedTags($output);
     }
 
     function getMenuTags($uId) {
@@ -377,6 +378,25 @@ class SemanticScuttle_Service_Tag2Tag extends SemanticScuttle_DbService
         $dbres = $this->db->sql_query($query);
         $rowset = $this->db->sql_fetchrowset($dbres);
         $this->db->sql_freeresult($dbres);
+
+        $userservice = SemanticScuttle_Service_Factory::get('User');
+        if (count($rowset)>0 && ! empty($GLOBALS['shoulderSurfingProtectedTag']) && $userservice->isLoggedOn() && ! isset($_COOKIE["noshoulderSurfingProtection"])) { 
+                $logged_on_user = $userservice->getCurrentUserId();
+                $shoulderSurfingProtectedTags = $this->getAllLinkedTags($GLOBALS['shoulderSurfingProtectedTag'], '>', $logged_on_user, array());
+                $shoulderSurfingProtectedTags[] = $GLOBALS['shoulderSurfingProtectedTag'];
+                $output = array();
+                foreach($rowset as $link) {
+                        $flag = 1;
+                        foreach ($shoulderSurfingProtectedTags as $tag) {
+                                if ($link['tag1'] === $tag || $link['tag2'] === $tag) {
+                                        $flag = 0;
+                                        break;
+                                }
+                        }
+                        if ($flag) {$output[] = $link;}
+                }
+                $rowset = $output;
+        }
         return $rowset;
     }
 
