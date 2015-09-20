@@ -26,9 +26,9 @@ if ($userservice->isLoggedOn() && is_object($currentUser)) {
 <?php if (isset($loadjs)) :?>
     <div id="password-form" style="background:white; z-index: 2; position:absolute; top:55px; right:10px; visibility:hidden;">
         <form id="noshoulderSurfingProtectionPassword">
-                  <input type="password" name="password" id="password" size="40" placeholder="Type your password then press Enter to unprotect.">
+                  <input type="password" name="password" id="password" size="40" placeholder="Type your password then press Enter to unprotect."/>
                   <!-- Allow form submission with keyboard without duplicating the dialog button -->
-                  <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+                  <input type="submit" tabindex="-1" style="position:absolute; top:-1000px"/>
         </form>
     </div>
     <script>

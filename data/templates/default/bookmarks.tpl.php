@@ -162,6 +162,14 @@ default:
  <a href="?sort=<?php echo $votingSort ?>"><?php echo T_("Voting").$votingArrow; ?></a>
  <span>/</span>
 <?php } ?>
+<?php
+if ($userservice->isLoggedOn() && $_SERVER['PHP_SELF'] !== "/index.php") {
+        echo '<form method="get" action="'. $_SERVER['REQUEST_URI'] .'">';
+        echo '<input type="hidden" name="batch" value="1"/>';
+        echo '<input type="submit" value="Batch tagging"/>';
+        echo "</form>";
+}
+?>
 
 <?php
 if ($currenttag!= '') {
@@ -178,7 +186,6 @@ if ($currenttag!= '') {
 	}
 }
 ?></p>
-
 <?php
 	// PAGINATION
 

@@ -281,13 +281,14 @@ class sql_db
 
 		if ($query_id)
 		{
-			unset($this->rowset[$query_id]);
-			unset($this->row[$query_id]);
+                        $id = (int) $query_id;
+			unset($this->rowset[$id]);
+			unset($this->row[$id]);
 
 			$result = array();
-			while ($this->rowset[$query_id] = $this->sql_fetchrow($query_id))
+			while ($this->rowset[$id] = $this->sql_fetchrow($query_id))
 			{
-				$result[] = $this->rowset[$query_id];
+				$result[] = $this->rowset[$id];
 			}
 			return $result;
 		}

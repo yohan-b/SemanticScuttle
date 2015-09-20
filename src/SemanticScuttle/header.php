@@ -87,7 +87,7 @@ require_once 'SemanticScuttle/constants.php';
 
 // Debug Management using constants
 if (DEBUG_MODE) {
-    ini_set('display_errors', '1');
+    ini_set('display_errors', '0');
     ini_set('mysql.trace_mode', '1');
     error_reporting(E_ALL);
 } else {

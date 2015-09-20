@@ -149,7 +149,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
         foreach ($tags as $key => $tag) {
             if (strpos($tag, '=')) {
                 // case "="
-                $pieces = explode('=', $tag);
+                $pieces = $tagservice->normalize(explode('=', $tag));
                 $nbPieces = count($pieces);
                 if ($nbPieces <= 1) {
                     continue;
@@ -163,7 +163,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
                 $tags[$key] = $pieces[0];
             } else {
                 // case ">"
-                $pieces   = explode('>', $tag);
+                $pieces   = $tagservice->normalize(explode('>', $tag));
                 $nbPieces = count($pieces);
                 if ($nbPieces <= 1) {
                     continue;
@@ -374,6 +374,7 @@ class SemanticScuttle_Service_Bookmark2Tag extends SemanticScuttle_DbService
         }
 
         $output = $this->db->sql_fetchrowset($dbresult);
+
         $this->db->sql_freeresult($dbresult);
         return $this->filterShoulderSurfingProtectedTags($output);
     }

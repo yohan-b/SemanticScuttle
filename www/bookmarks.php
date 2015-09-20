@@ -54,9 +54,13 @@ isset($_POST['popup']) ? define('POST_POPUP', $_POST['popup']): define('POST_POP
 
 isset($_GET['page']) ? define('GET_PAGE', $_GET['page']): define('GET_PAGE', 0);
 isset($_GET['sort']) ? define('GET_SORT', $_GET['sort']): define('GET_SORT', '');
+isset($_GET['batch']) ? define('GET_BATCH', $_GET['batch']): define('GET_BATCH', 0);
 
 if (!isset($_POST['tags'])) {
     $_POST['tags'] = array();
+}
+if (!isset($_POST['removetags'])) {
+    $_POST['removetags'] = array();
 }
 //echo '<p>' . var_export($_POST, true) . '</p>';die();
 if (! is_array($ADDRESS)) {
@@ -162,7 +166,8 @@ if ($userservice->isLoggedOn() && POST_SUBMITTED != '') {
                         $description = trim(POST_DESCRIPTION);
                         $privateNote = trim(POST_PRIVATENOTE);
                         $status = intval(POST_STATUS);
-                        $categories = explode(',', $_POST['tags']);
+                        $categories = array_map('trim', explode(',', trim($_POST['tags'])));
+                        $removecategories = array_map('trim', explode(',', trim($_POST['removetags'])));
                         $saved = true;
                         foreach($address as $index => $value) {        
                                 if ($bookmarkservice->bookmarkExists($value, $currentUserID)) {
@@ -171,6 +176,8 @@ if ($userservice->isLoggedOn() && POST_SUBMITTED != '') {
                                     $bId = intval($bookmark['bId']);
                                     $row = $bookmarkservice->getBookmark($bId, true);
                                     $categories = array_unique(array_merge($row['tags'], $categories));
+                                    // remove tags
+                                    $categories = array_diff($categories, $removecategories);
                                     if (!$bookmarkservice->updateBookmark($bId, $value, $title[$index], $description, $privateNote, $status, $categories)) {
                                         $tplvars['error'] = T_('Error while saving this bookmark : ' + $value);
                                         $templatename = 'editbookmark.tpl';
@@ -199,7 +206,7 @@ if ($userservice->isLoggedOn() && POST_SUBMITTED != '') {
 	}
 }
 
-if (GET_ACTION == "add") {
+if (GET_ACTION == "add" || GET_BATCH) {
 	// If the bookmark exists already, edit the original
 	if (count($ADDRESS) === 1) {
 		if ($bookmarkservice->bookmarkExists(stripslashes($ADDRESS[0]), $currentUserID)) {		
@@ -212,20 +219,46 @@ if (GET_ACTION == "add") {
 	$templatename = 'editbookmark.tpl';
 }
 
-if ($templatename == 'editbookmark.tpl') {
+if ($templatename == 'editbookmark.tpl') { // Prepare to display the edit bookmark page.
 	if ($userservice->isLoggedOn()) {
 		$tplVars['formaction']  = createURL('bookmarks', $currentUsername);
 		if (POST_SUBMITTED != '') {
 			$tplVars['row'] = array(
-                'bTitle' => array_map('stripslashes', $TITLE),
-                'bAddress' => array_map('stripslashes', $ADDRESS),
-                'bDescription' => stripslashes(POST_DESCRIPTION),
-                'bPrivateNote' => stripslashes(POST_PRIVATENOTE),
-                'tags' => ($_POST['tags'] ? $_POST['tags'] : array()),
+                                'bTitle' => array_map('stripslashes', $TITLE),
+                                'bAddress' => array_map('stripslashes', $ADDRESS),
+                                'bDescription' => stripslashes(POST_DESCRIPTION),
+                                'bPrivateNote' => stripslashes(POST_PRIVATENOTE),
+                                'tags' => ($_POST['tags'] ? $_POST['tags'] : array()),
 				'bStatus' => $GLOBALS['defaults']['privacy'],
 			);
 			$tplVars['tags'] = $_POST['tags'];
-		} else {
+                } 
+                elseif (GET_BATCH) {
+                        $completebookmarks = $bookmarkservice->getBookmarks(0, null, $userid, $cat, null, getSortOrder());
+                        $addresses2 = array();
+                        $titles2 = array();
+                        $tags2 = array();
+                        foreach ($completebookmarks['bookmarks'] as $key => &$row) {
+                                $addresses2[$row['bId']] = $row['bAddress'];
+                                $titles2[$row['bId']] = $row['bTitle'];
+                                $row = $bookmarkservice->getBookmark($row['bId'], true);
+                                $tags2[] = $row['tags'];
+                        }
+                        $alltags2 = array_unique(call_user_func_array('array_merge', $tags2));
+                        $commontags2 = call_user_func_array('array_intersect', $tags2);
+                        $tplVars['row'] = array(
+                                'bTitle' => $titles2,
+                                'bAddress' => $addresses2,
+                                'bDescription' => '',
+                                'bPrivateNote' => '',
+                                'tags' => array(),
+                                'bStatus' => $GLOBALS['defaults']['privacy']
+                        );
+                        $tplVars['batch'] = '1';
+                        $tplVars['alltags'] = implode(', ', $alltags2);
+                        $tplVars['commontags'] = implode(', ', $commontags2);
+                }
+                else {
 			if(GET_COPYOF != '') {  //copy from bookmarks page
 				$tplVars['row'] = $bookmarkservice->getBookmark(intval(GET_COPYOF), true);
 				if(!$currentUser->isAdmin()) {
@@ -234,9 +267,7 @@ if ($templatename == 'editbookmark.tpl') {
 			}else {  //copy from pop-up bookmarklet
 			 $tplVars['row'] = array(
 			 	'bTitle' => array_map('stripslashes', $TITLE),
-			 	//'bTitle' => stripslashes(GET_TITLE),
 			 	'bAddress' => array_map('stripslashes', $ADDRESS),
-                		//'bAddress' => stripslashes(GET_ADDRESS),
                 		'bDescription' => stripslashes(GET_DESCRIPTION),
                 		'bPrivateNote' => stripslashes(GET_PRIVATENOTE),
                 		'tags' => (GET_TAGS ? explode(',', stripslashes(GET_TAGS)) : array()),
@@ -332,24 +363,24 @@ if ($templatename == 'editbookmark.tpl') {
         )
 	);
 
-    if ($userservice->isLoggedOn()) {
-        $currentUsername = $currentUser->getUsername();
-        if ($userservice->isPrivateKeyValid($currentUser->getPrivateKey())) {
-            array_push(
-                $tplVars['rsschannels'],
-                array(
-                    sprintf(
-                        T_('%s: %s (+private %s)'),
-                        $sitename, $rssTitle, $currentUsername
-                    ),
-                    createURL('rss', filter($currentUsername, 'url'))
-                    . $rssCat
-                    . '?sort=' . getSortOrder()
-                    . '&privateKey=' . $currentUser->getPrivateKey()
-                )
-            );
+        if ($userservice->isLoggedOn()) {
+            $currentUsername = $currentUser->getUsername();
+            if ($userservice->isPrivateKeyValid($currentUser->getPrivateKey())) {
+                array_push(
+                    $tplVars['rsschannels'],
+                    array(
+                        sprintf(
+                            T_('%s: %s (+private %s)'),
+                            $sitename, $rssTitle, $currentUsername
+                        ),
+                        createURL('rss', filter($currentUsername, 'url'))
+                        . $rssCat
+                        . '?sort=' . getSortOrder()
+                        . '&privateKey=' . $currentUser->getPrivateKey()
+                    )
+                );
+            }
         }
-    }
 
 	$tplVars['page'] = $page;
 	$tplVars['start'] = $start;

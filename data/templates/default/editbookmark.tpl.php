@@ -47,7 +47,7 @@ $ajaxUrl = ROOT . 'ajax/'
             : 'getcontacttags'
     ) . '.php';
 ?>
-<form onsubmit="var ind = 0; var cb = document.getElementById('checkbox'+ind); while (cb !== undefined) {var title = document.getElementById('titleField'+ind); var address = document.getElementById('address'+ind); if(cb.checked) {cb.parentNode.removeChild(cb);} else {cb.parentNode.removeChild(cb); title.parentNode.removeChild(title); address.parentNode.removeChild(address);} ind++; cb = document.getElementById('checkbox'+ind);}" action="<?php echo $formaction; ?>" method="post">
+<form onsubmit="var ind = 0; var cb = document.getElementById('checkbox'+ind); while (cb !== null) {var title = document.getElementById('titleField'+ind); var address = document.getElementById('address'+ind); if(cb.checked) {cb.parentNode.removeChild(cb);} else {cb.parentNode.removeChild(cb); title.parentNode.removeChild(title); address.parentNode.removeChild(address);} ind++; cb = document.getElementById('checkbox'+ind);}" action="<?php echo $formaction; ?>" method="post">
 <table>
 <tr>
     <th align="left">
@@ -75,13 +75,44 @@ $ajaxUrl = ROOT . 'ajax/'
     <td>← <?php echo T_('Just visible by you and your contacts.'); ?>
     </td>
 </tr>
+<?php if(! isset($batch)): ?>
 <tr>
     <th align="left"><?php echo T_('Tags'); ?></th>
     <td class="scuttletheme">
-     <input type="text" id="tags" name="tags" size="75" value="<?php echo filter($row['tags'], 'xml'); ?>"/>
+     <input type="text" id="tags" class="tags" name="tags" size="75" value="<?php echo filter($row['tags'], 'xml'); ?>"/>
     </td>
     <td>← <?php echo T_('Comma-separated'); ?></td>
 </tr>
+<?php else: ?>
+<tr>
+    <th align="left"><?php echo 'Common tags'; ?></th>
+    <td class="scuttletheme">
+     <span><?php echo filter($commontags, 'xml'); ?></span>
+    </td>
+    <td>← <?php echo 'Tags common to all those bookmarks'; ?></td>
+</tr>
+<tr>
+    <th align="left"><?php echo 'Associated tags'; ?></th>
+    <td class="scuttletheme">
+     <span><?php echo filter($alltags, 'xml'); ?></span>
+    </td>
+    <td>← <?php echo 'All tags associated to those bookmarks'; ?></td>
+</tr>
+<tr>
+    <th align="left"><?php echo 'Add those tags'; ?></th>
+    <td class="scuttletheme">
+     <input type="text" id="tags" class="tags" name="tags" size="75" value="<?php echo filter($row['tags'], 'xml'); ?>"/>
+    </td>
+    <td>← <?php echo T_('Comma-separated'); ?></td>
+</tr>
+<tr>
+    <th align="left"><?php echo 'Remove those tags'; ?></th>
+    <td class="scuttletheme">
+     <input type="text" id="removetags" class="tags" name="removetags" size="75" value="<?php echo filter($row['tags'], 'xml'); ?>"/>
+    </td>
+    <td>← <?php echo T_('Comma-separated'); ?></td>
+</tr>
+<?php endif; ?>
 <tr>
     <th></th>
     <td align="right"><small><?php echo htmlspecialchars(T_('Note: use ">" to include one tag in another. e.g.: europe>france>paris'))?></small></td>
@@ -112,6 +143,9 @@ $ajaxUrl = ROOT . 'ajax/'
         <input type="submit" name="delete" value="<?php echo T_('Delete Bookmark'); ?>" />
         <?php
         }
+        ?>
+        <button type="button" id="button" title="Invert selection" onclick="var ind = 0; var cb = document.getElementById('checkbox'+ind); while (cb !== null) {var title = document.getElementById('titleField'+ind); var address = document.getElementById('address'+ind); if(cb.checked) {cb.checked=false;} else {cb.checked=true;} ind++; cb = document.getElementById('checkbox'+ind);}">Invert selection</button>
+        <?php
         if (isset($showdelete) && $showdelete) {
 			echo ' (<a href="'.createURL('bookmarkcommondescriptionedit', $row['bHash']).'">';
 			echo T_('edit common description').'</a>)';
@@ -131,21 +165,22 @@ $ajaxUrl = ROOT . 'ajax/'
     <td></td>
   </tr>
 <?php
+$ind = 0;
 foreach($row['bAddress'] as $index => $address) {
 ?>
 <tr>
     <td height="20px"></td>
-    <td><input type="checkbox" id="checkbox<?php echo $index; ?>" checked /></td>
+    <td><input type="checkbox" id="checkbox<?php echo $ind; ?>" checked="checked" /></td>
     <td></td>
 </tr>
 <tr>
     <th align="left"><?php echo T_('Address'); ?></th>
-    <td><input type="text" id="address<?php echo $index; ?>" name="address[<?php echo $index; ?>]" size="75" maxlength="65535" value="<?php echo filter($address, 'xml'); ?>" onblur="useAddress(this)" /></td>
+    <td><input type="text" id="address<?php echo $ind; ?>" name="address[<?php echo $index; ?>]" size="75" maxlength="65535" value="<?php echo filter($address, 'xml'); ?>" onblur="useAddress(this)" /></td>
     <td>← <?php echo T_('Required'); ?></td>
 </tr>
 <tr>
     <th align="left"><?php echo T_('Title'); ?></th>
-    <td><input type="text" id="titleField<?php echo $index; ?>" name="title[<?php echo $index; ?>]" size="75" maxlength="255" value="<?php echo filter($row['bTitle'][$index], 'xml'); ?>" onkeypress="this.style.backgroundImage = 'none';" /></td>
+    <td><input type="text" id="titleField<?php echo $ind; ?>" name="title[<?php echo $index; ?>]" size="75" maxlength="255" value="<?php echo filter($row['bTitle'][$index], 'xml'); ?>" onkeypress="this.style.backgroundImage = 'none';" /></td>
     <td>← <?php echo T_('Required'); ?></td>
 </tr>
 <tr>
@@ -154,6 +189,7 @@ foreach($row['bAddress'] as $index => $address) {
     <td></td>
 </tr>
 <?php
+    $ind++;
 }
 ?>
 </table>
@@ -179,7 +215,8 @@ jQuery(document).ready(function() {
     }
     //var availableTags = ["c++", "java", "php", "coldfusion", "javascript", "asp", "ruby"];
 
-    jQuery("input#tags").autocomplete({
+    //jQuery("input#tags").autocomplete({
+    jQuery("input.tags").autocomplete({
         autoFocus: true,
         minLength: 1,
 

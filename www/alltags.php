@@ -72,7 +72,6 @@ if (isset($userid)) {
 } else {
 	$tplVars['cat_url'] = createURL('tags', '%2$s');
 }
-
 $tplVars['sidebar_blocks'] = array('linked');
 $tplVars['userid'] = $userid;
 $tplVars['loadjs'] = true;

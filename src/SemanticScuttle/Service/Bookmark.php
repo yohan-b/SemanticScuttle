@@ -888,10 +888,13 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
                 // but private notes won't appear if not allowed.
                 $query_4 .= ' OR B.bPrivateNote LIKE "'
                     . $this->db->sql_escape($aTerms[$i])
-                    .'%"';
+                    . '%"';
                 $query_4 .= ' OR U.username = "'
                     . $this->db->sql_escape($aTerms[$i])
                     . '"'; //exact match for username
+                $query_4 .= ' OR B.bAddress LIKE "%'
+                    . $this->db->sql_escape($aTerms[$i])
+                    . '%"';
                 if ($dotags) {
                     $query_4 .= ' OR T.tag LIKE "'
                         . $this->db->sql_escape($aTerms[$i])
@@ -940,10 +943,10 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
                 '', __LINE__, __FILE__, $query, $this->db
             );
         }
-
-        if (SQL_LAYER == 'mysql4') {
-            $totalquery = 'SELECT FOUND_ROWS() AS total';
-        } else {
+        // Disabled because breaks when in debug mode…
+        //if (SQL_LAYER == 'mysql4') {
+        //    $totalquery = 'SELECT FOUND_ROWS() AS total';
+        //} else {
             if ($hash) {
                 $totalquery = 'SELECT COUNT(*) AS total'. $query_2
                     . $query_3 . $query_4;
@@ -951,7 +954,7 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
                 $totalquery = 'SELECT COUNT(DISTINCT bAddress) AS total'
                     . $query_2 . $query_3 . $query_4;
             }
-        }
+        //}
 
         if (!($totalresult = $this->db->sql_query($totalquery))
             || (!($row = $this->db->sql_fetchrow($totalresult)))
@@ -980,7 +983,6 @@ class SemanticScuttle_Service_Bookmark extends SemanticScuttle_DbService
 
         $this->db->sql_freeresult($dbresult);
         $output = array ('bookmarks' => $bookmarks, 'total' => $total);
-
         return $output;
     }
 

@@ -26,7 +26,7 @@ isset($_POST['terms']) ? define('POST_TERMS', $_POST['terms']): define('POST_TER
 isset($_POST['range']) ? define('POST_RANGE', $_POST['range']): define('POST_RANGE', '');
 isset($_GET['page']) ? define('GET_PAGE', $_GET['page']): define('GET_PAGE', 0);
 isset($_GET['sort']) ? define('GET_SORT', $_GET['sort']): define('GET_SORT', '');
-
+isset($_GET['batch']) ? define('GET_BATCH', $_GET['batch']): define('GET_BATCH', 0);
 
 // POST
 if (POST_TERMS != '') {
@@ -115,6 +115,41 @@ if (is_null($terms)) {
 
     }
 }
+if ($userservice->isLoggedOn() && GET_BATCH) {
+   $currentUsername = $currentUser->getUsername();
+   $completebookmarks = $bookmarkservice->getBookmarks(0, null, $s_user, null, $terms, getSortOrder(), 
+       $s_watchlist, $s_start, $s_end);
+   $templatename = 'editbookmark.tpl';
+   $addresses2 = array();
+   $titles2 = array();
+   $tags2 = array();
+   foreach ($completebookmarks['bookmarks'] as $key => &$row) {
+      $addresses2[$row['bId']] = $row['bAddress'];
+      $titles2[$row['bId']] = $row['bTitle'];
+      $row = $bookmarkservice->getBookmark($row['bId'], true);
+      $tags2[] = $row['tags'];
+   }
+   $alltags2 = array_unique(call_user_func_array('array_merge', $tags2));
+   $commontags2 = call_user_func_array('array_intersect', $tags2);
+   $tplVars['row'] = array(
+        'bTitle' => $titles2,
+        'bAddress' => $addresses2,
+        'bDescription' => '',
+        'bPrivateNote' => '',
+        'tags' => array(),
+        'bStatus' => $GLOBALS['defaults']['privacy']
+   );
+   $tplVars['pagetitle'] = T_('Add a Bookmark');
+   $tplVars['subtitle'] = T_('Add a Bookmark');
+   $tplVars['btnsubmit'] = T_('Add Bookmark');
+   $tplVars['popup'] = null;
+   $tplVars['batch'] = '1';
+   $tplVars['alltags'] = implode(', ', $alltags2);
+   $tplVars['commontags'] = implode(', ', $commontags2);
+   $tplVars['formaction']  = createURL('bookmarks', $currentUsername);
+   $templateservice->loadTemplate($templatename, $tplVars);
+}
+else {
 $bookmarks = $bookmarkservice->getBookmarks(
     $start, $perpage, $s_user, NULL, $terms, getSortOrder(),
     $s_watchlist, $s_start, $s_end
@@ -152,4 +187,5 @@ $tplVars['cat_url'] = createURL('tags', '%2$s');
 $tplVars['nav_url'] = createURL('search', $range .'/'. $terms .'/%3$s');
 
 $templateservice->loadTemplate('bookmarks.tpl', $tplVars);
+}
 ?>
